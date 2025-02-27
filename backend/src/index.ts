@@ -14,12 +14,12 @@ type Accounts = {
   balance: number;
 };
 type Sessions = {
-  userId: number;
+  userId: string;
   token: string;
 };
 
 const users: Users[] = [];
-const accounts: Accounts[] = [];
+let accounts: Accounts[] = [];
 const sessions: Sessions[] = [];
 
 const app = express();
@@ -50,7 +50,7 @@ app.post("/users", (req: Request, res: Response) => {
     const newAccount: Accounts = {
       id: generateOTP(),
       userId: newUser.id,
-      balance: 0,
+      balance: 100,
     };
 
     accounts.push(newAccount);
@@ -62,15 +62,81 @@ app.post("/users", (req: Request, res: Response) => {
 });
 
 app.post("/sessions", (req: Request, res: Response) => {
-  res.status(200).json({ messsage: "OK" });
+  try {
+    const { username, password } = req.body;
+
+    const existingUser = users.find((user) => user.username === username);
+
+    console.log("USERS", users);
+
+    if (existingUser) {
+      if (existingUser.password !== password) {
+        throw new Error(`Wrong password!`);
+      }
+
+      const newSession: Sessions = {
+        userId: existingUser.id,
+        token: generateOTP(),
+      };
+
+      sessions.push(newSession);
+      console.log(sessions);
+      res.status(200).json({ newSession });
+    } else {
+      throw new Error(`User not found.`);
+    }
+  } catch (error) {
+    res.status(500).send(`${error}`);
+  }
 });
 
-app.post("/me/accounts", (req: Request, res: Response) => {
-  res.status(200).json({ messsage: "OK" });
+app.post("/me/account", (req: Request, res: Response) => {
+  try {
+    const { authorization } = req.headers;
+    const token = authorization?.replace("Bearer ", "");
+
+    const session = sessions.find((t) => t.token === token);
+    const accountUser = accounts.find((id) => id.userId === session?.userId);
+
+    if (session) {
+      if (session.userId !== accountUser?.userId) {
+        throw new Error(`Session ID invalid.`);
+      }
+    }
+    res.status(200).json({ balance: accountUser?.balance });
+  } catch (error) {
+    res.status(500).send(`Error ${error}`);
+  }
 });
 
-app.post("/me/accounts/transactions", (req: Request, res: Response) => {
-  res.status(200).json({ messsage: "OK" });
+app.post("/me/account/transaction", (req: Request, res: Response) => {
+  try {
+    const { authorization } = req.headers;
+    const token = authorization?.replace("Bearer ", "");
+
+    const session = sessions.find((t) => t.token === token);
+    console.log("SESSION", session);
+
+    const accountUser = accounts.find((id) => id.userId === session?.userId);
+    console.log("ACCOUNTS", accounts);
+    console.log("accountUser", accountUser);
+
+    const { amount } = req.body;
+
+    const newBalance = accountUser?.balance + amount;
+
+    accounts = accounts.map((account) =>
+      account.userId === accountUser?.userId
+        ? { ...account, balance: newBalance }
+        : account
+    );
+
+    console.log("RESULT", accounts);
+
+    res.status(200).json({ message: newBalance });
+  } catch (error) {
+    res.status(500).send(`Error`);
+  }
 });
 
 app.listen(PORT, () => {
