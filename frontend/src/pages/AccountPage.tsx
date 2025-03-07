@@ -60,6 +60,7 @@ function AccountPage() {
                 const data = await response.json();
                 alert(`Du har nu ${data.message} kronor på ditt konto`);
                 fetchAccountBalance();
+                setBalance(data.balance);
             } else {
                 console.error('Error:', response);
             }
@@ -90,6 +91,7 @@ function AccountPage() {
             onChange={(e) => {
                 const value = parseFloat(e.target.value);
                 setDepositAmount(isNaN(value) ? 0 : value);
+                setBalance(balance);
               }}
               className='block px-3 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6'
           />
